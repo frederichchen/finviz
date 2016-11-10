@@ -1,0 +1,21 @@
+body {
+    height: 80%;
+    width: 100%;
+    margin: 0;
+}
+
+div#treemap {
+    margin-top: 30px;
+    height: 700px;
+    width: 45%;
+    display: inline;
+    float: left;
+}
+
+div#sankey {
+    margin-top: 30px;
+    height: 700px;
+    width: 55%;
+    display: inline;
+    float: left;
+}

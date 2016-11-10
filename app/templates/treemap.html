@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<meta charset="UTF-8">
+	<title>Treemap 测试</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/maptree_sankey.css" />
+	<script src="/static/js/echarts.min.js"></script>
+	<script src="/static/js/jquery-3.1.1.min.js"></script>
+  </head>
+  <body>
+	<div id="treemap"></div>
+    <div id="sankey"></div>
+    <script type="text/javascript">
+	 var chartTreemap = echarts.init(document.getElementById('treemap'));
+     var chartSankey = echarts.init(document.getElementById('sankey'));
+	 chartTreemap.showLoading();
+     var formatUtil = echarts.format;
+     // 获取数据
+     $.getJSON('/treemap_data', function (rawData) {
+
+       chartTreemap.hideLoading();
+       // 下面的函数递归调用，将返回的 dict 转为 treemap 要求的格式
+       function convert(source, target, basePath) {
+         for (var key in source) {
+           var path = basePath ? (basePath + '.' + key) : key;
+           if (key == 'values') {
+           }
+           else {
+             target.children = target.children || [];
+             var child = {
+               name: path,
+               values: source[key]["values"]
+             };
+             target.children.push(child);
+             convert(source[key], child, path);
+           }
+         }
+         target.value = source.values? source.values[0] : 1;
+       }
+
+       var data = [];
+
+       convert(rawData, data, '');
+
+       chartTreemap.setOption(option = {
+         title: {
+           text: '预算指标与支付贯通',
+           subtext: '审计署成都办计算机处',
+           left: 'center'
+         },
+         tooltip: {
+           formatter: function(info) {
+             return [
+               '<div class="tooltip-title">' + formatUtil.encodeHTML(info.data.name) + '</div>',
+               '预算指标: ' + formatUtil.addCommas(info.data.values[0]) + ' 万元', '<br />',
+               '支付金额: ' + formatUtil.addCommas(info.data.values[1]) + ' 万元',
+             ].join('');
+           }
+         },
+         series: [{
+           name: '预算指标与支付贯通',
+           type: 'treemap',
+           visibleMin: 300,
+           data: data.children,
+           leafDepth: 1,
+           levels: [
+             {
+               itemStyle: {
+                 normal: {
+                   borderColor: '#555',
+                   borderWidth: 4,
+                   gapWidth: 4
+                 }
+               }
+             },
+             {
+               colorSaturation: [0.3, 0.6],
+               itemStyle: {
+                 normal: {
+                   borderColorSaturation: 0.7,
+                   gapWidth: 2,
+                   borderWidth: 2
+                 }
+               }
+             },
+             {
+               colorSaturation: [0.3, 0.5],
+               itemStyle: {
+                 normal: {
+                   borderColorSaturation: 0.6,
+                   gapWidth: 1
+                 }
+               }
+             },
+             {
+               colorSaturation: [0.3, 0.5]
+             }
+           ]
+         }]
+       })
+     });
+     // 当鼠标经过的时候，如果已经展开到“款”一级，则触发桑基图联动
+     chartTreemap.on('mouseover', function(params) {
+       var kemu = params.name.split('.')
+       if(kemu.length < 3) {
+         chartSankey.clear();
+       }
+       else {
+         chartSankey.showLoading();
+         var dataUrl = "/sankey_data?xianqu=" + kemu[0] + "&lei=" + kemu[1] + "&kuan=" + kemu[2]
+         if(kemu[3]) {
+           dataUrl += "&xiang=" + kemu[3]
+         }
+         $.getJSON(dataUrl, function (data) {
+           chartSankey.hideLoading();
+
+           chartSankey.setOption(option = {
+             title: {
+               text: '支付分解到用款单位',
+               subtext: "审计署成都办计算机处",
+               left: 'center'
+             },
+             tooltip: {
+               trigger: 'item',
+               triggerOn: 'mousemove'
+
+             },
+             series: [
+               {
+                 type: 'sankey',
+                 layout:'none',
+                 top: '10%',
+                 bottom: '0%',
+                 data: data.nodes,
+                 links: data.links,
+                 itemStyle: {
+                   normal: {
+                     borderWidth: 1,
+                     borderColor: '#aaa'
+                   }
+                 },
+                 lineStyle: {
+                   normal: {
+                     curveness: 0.5
+                   }
+                 }
+               }
+             ]
+           });
+         });
+       }
+     });
+	</script>
+  </body>
+</html>
